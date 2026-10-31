@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Orbitron } from "next/font/google";
+import { CustomCursor } from "@/components/animations/CustomCursor";
 import "./globals.css";
 
 const inter = Inter({
@@ -27,6 +28,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${orbitron.variable}`}>
       <body className="bg-mani-black text-mani-white antialiased">
+        <CustomCursor />
         {children}
       </body>
     </html>

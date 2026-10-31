@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import Link from "next/link";
 import { ShoppingCart, Eye, Star, Zap, Clock } from "lucide-react";
 import type { Product } from "@/types";
@@ -14,6 +15,7 @@ interface ProductCardProps {
 
 export function ProductCard({ product }: ProductCardProps) {
   const addItem = useCartStore((s) => s.addItem);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -27,11 +29,59 @@ export function ProductCard({ product }: ProductCardProps) {
     toast.success(`${product.name} (1 Day) added to cart`);
   };
 
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const card = cardRef.current;
+    if (!card) return;
+    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+
+    const rotateX = ((y - centerY) / centerY) * -7;
+    const rotateY = ((x - centerX) / centerX) * 7;
+
+    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-4px)`;
+    card.style.setProperty("--glare-x", `${(x / rect.width) * 100}%`);
+    card.style.setProperty("--glare-y", `${(y / rect.height) * 100}%`);
+  };
+
+  const handleMouseEnter = () => {
+    const card = cardRef.current;
+    if (!card) return;
+    card.style.transition = "transform 0.12s ease-out, border-color 0.3s ease, box-shadow 0.3s ease";
+  };
+
+  const handleMouseLeave = () => {
+    const card = cardRef.current;
+    if (!card) return;
+    card.style.transition = "transform 0.5s cubic-bezier(0.23, 1, 0.32, 1), border-color 0.3s ease, box-shadow 0.3s ease";
+    card.style.transform = "perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(0px)";
+  };
+
   return (
     <Link href={`/products/${product.slug}`} className="block h-full">
-      <div className="glass-card rounded-2xl overflow-hidden group cursor-pointer h-full flex flex-col transition-all duration-300 hover:border-mani-red/60 hover:shadow-glow-red hover:-translate-y-1 relative">
+      <div
+        ref={cardRef}
+        onMouseMove={handleMouseMove}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        style={{ transformStyle: "preserve-3d" }}
+        className="glass-card rounded-2xl overflow-hidden group cursor-pointer h-full flex flex-col will-change-transform hover:border-mani-red/70 hover:shadow-[0_0_35px_rgba(245,11,0,0.35)] relative"
+      >
         {/* Animated Glow Border Highlight */}
-        <div className="absolute inset-0 bg-gradient-to-b from-mani-red/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-b from-mani-red/15 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+
+        {/* Dynamic 3D Glare Reflection */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20"
+          style={{
+            background:
+              "radial-gradient(circle 240px at var(--glare-x, 50%) var(--glare-y, 50%), rgba(255, 255, 255, 0.08), transparent 70%)",
+          }}
+        />
 
         {/* Product Image */}
         <div className="relative aspect-[16/10] bg-mani-grey/70 overflow-hidden">

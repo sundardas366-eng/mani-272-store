@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Crown, Shield, Copy, Check, MessageSquare, Youtube, ExternalLink, ArrowRight, Sparkles } from "lucide-react";
+import { Crown, Shield, Copy, Check, MessageSquare, Youtube, ExternalLink, ArrowRight, Sparkles, Image as ImageIcon } from "lucide-react";
 import { motion } from "framer-motion";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
@@ -14,7 +14,11 @@ interface TeamMember {
   name: string;
   role: "SERVER OWNER" | "CO-FOUNDER";
   discordId: string;
+  discordTag?: string;
   discordUrl: string;
+  photoUrl?: string;
+  profileCardUrl?: string;
+  statusText?: string;
   youtubeUrl?: string;
   description: string;
   responsibilities: string[];
@@ -27,7 +31,11 @@ const TEAM_MEMBERS: TeamMember[] = [
     name: "Mani 272",
     role: "SERVER OWNER",
     discordId: "1457931837769908467",
+    discordTag: "_mani272",
     discordUrl: "https://discord.com/users/1457931837769908467",
+    photoUrl: "/images/team/mani-272-avatar.jpg",
+    profileCardUrl: "/images/team/mani-272-profile.jpg",
+    statusText: "Server Owner | Tech Services",
     description:
       "Server Owner and Founder of MANI 272 STORE. Overseeing store infrastructure, security policies, client support, and product authenticity.",
     responsibilities: [
@@ -43,8 +51,10 @@ const TEAM_MEMBERS: TeamMember[] = [
     name: "Eagle 272",
     role: "CO-FOUNDER",
     discordId: "1508220374033109190",
+    discordTag: "eagle272",
     discordUrl: "https://discord.com/users/1508220374033109190",
     youtubeUrl: "https://www.youtube.com/@eagle272-v4p",
+    statusText: "Co-Founder | Media & Development",
     description:
       "Co-Founder of MANI 272 STORE and creator of the official EAGLE 272 YouTube channel. Directing product development, video guides, and technical tutorials.",
     responsibilities: [
@@ -60,6 +70,7 @@ const TEAM_MEMBERS: TeamMember[] = [
 
 export default function TeamPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [showProfileCard, setShowProfileCard] = useState(false);
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -123,9 +134,17 @@ export default function TeamPage() {
                         <div className="flex items-center gap-4">
                           <div className="relative">
                             <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#1c0808] to-mani-black border-2 border-mani-red/40 flex items-center justify-center shadow-glow-red overflow-hidden">
-                              <span className="mani-brand text-3xl font-black text-white">
-                                {member.name.slice(0, 1)}
-                              </span>
+                              {member.photoUrl ? (
+                                <img
+                                  src={member.photoUrl}
+                                  alt={member.name}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                />
+                              ) : (
+                                <span className="mani-brand text-3xl font-black text-white">
+                                  {member.name.slice(0, 1)}
+                                </span>
+                              )}
                             </div>
                             <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-green-500 border-2 border-mani-black flex items-center justify-center">
                               <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
@@ -152,6 +171,11 @@ export default function TeamPage() {
                             <h2 className="text-2xl sm:text-3xl font-black text-white group-hover:text-mani-red transition-colors">
                               {member.name}
                             </h2>
+                            {member.discordTag && (
+                              <p className="text-xs text-white/40 font-mono mt-0.5">
+                                @{member.discordTag}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -181,6 +205,32 @@ export default function TeamPage() {
                           <span>{isCopied ? "Copied" : "Copy"}</span>
                         </button>
                       </div>
+
+                      {/* Official Discord Profile Preview for Server Owner */}
+                      {member.profileCardUrl && (
+                        <div className="mb-6 bg-mani-black/60 border border-white/10 rounded-2xl p-3 overflow-hidden">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-[10px] font-bold text-white/50 uppercase tracking-wider flex items-center gap-1.5">
+                              <ImageIcon className="w-3.5 h-3.5 text-mani-red" />
+                              Official Discord Profile Card
+                            </span>
+                            <button
+                              onClick={() => setShowProfileCard(!showProfileCard)}
+                              className="text-[10px] text-mani-red hover:underline font-bold"
+                            >
+                              {showProfileCard ? "Collapse" : "View Full Card"}
+                            </button>
+                          </div>
+                          <div className={`overflow-hidden rounded-xl border border-white/10 transition-all duration-300 ${showProfileCard ? "max-h-[500px]" : "max-h-36"}`}>
+                            <img
+                              src={member.profileCardUrl}
+                              alt={`${member.name} Discord Profile`}
+                              className="w-full object-cover object-top cursor-pointer hover:opacity-95"
+                              onClick={() => setShowProfileCard(!showProfileCard)}
+                            />
+                          </div>
+                        </div>
+                      )}
 
                       {/* Bio */}
                       <p className="text-white/60 text-sm leading-relaxed mb-6">

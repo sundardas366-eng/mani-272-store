@@ -265,6 +265,7 @@ export function TeamSection() {
     description: "Founder and owner of MANI 272 STORE. Dedicated to delivering premium digital products with top-tier quality and support.",
     discordUrl: "https://discord.com/users/1457931837769908467",
     discordId: "1457931837769908467",
+    photoUrl: "/images/team/mani-272-avatar.jpg",
   };
   const cofounder = {
     name: "Eagle 272",
@@ -272,6 +273,7 @@ export function TeamSection() {
     description: "Co-founder of MANI 272 STORE. Leading development, YouTube channel production and technical support.",
     discordUrl: "https://discord.com/users/1508220374033109190",
     discordId: "1508220374033109190",
+    photoUrl: "",
   };
 
   return (
@@ -304,16 +306,24 @@ export function TeamSection() {
   );
 }
 
-function TeamCard({ member }: { member: { name: string; position: string; description: string; discordUrl: string; discordId: string } }) {
+function TeamCard({ member }: { member: { name: string; position: string; description: string; discordUrl: string; discordId: string; photoUrl?: string } }) {
   return (
     <div className="glass-card rounded-2xl p-8 text-center hover:border-mani-red/40 transition-all group">
-      {/* Avatar placeholder — user will upload actual photos */}
+      {/* Avatar */}
       <div className="relative w-24 h-24 mx-auto mb-4">
         <div className="absolute inset-0 bg-mani-red/20 rounded-full blur-xl animate-glow-pulse" />
-        <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-mani-red to-mani-red-dark flex items-center justify-center shadow-glow-red">
-          <span className="text-white font-black text-2xl mani-brand">
-            {member.name.charAt(0)}
-          </span>
+        <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-[#1c0808] to-mani-black border-2 border-mani-red/50 flex items-center justify-center shadow-glow-red overflow-hidden">
+          {member.photoUrl ? (
+            <img
+              src={member.photoUrl}
+              alt={member.name}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+          ) : (
+            <span className="text-white font-black text-2xl mani-brand">
+              {member.name.charAt(0)}
+            </span>
+          )}
         </div>
       </div>
 

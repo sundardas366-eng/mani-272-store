@@ -41,7 +41,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
     name: "Mani 272",
     position: "SERVER OWNER",
     description: "Server Owner and Founder of MANI 272 STORE. Managing operations, security, infrastructure and ensuring top-tier service delivery.",
-    photoUrl: "",
+    photoUrl: "/images/team/mani-272-avatar.jpg",
     discordUserId: "1457931837769908467",
     discordUrl: "https://discord.com/users/1457931837769908467",
   },

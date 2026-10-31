@@ -1,0 +1,215 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --mani-red: #F50B00;
+  --mani-red-light: #FF2D20;
+  --mani-black: #0A0A0B;
+  --mani-grey: #1E1E22;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: #0A0A0B;
+  color: #FFFFFF;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  overflow-x: hidden;
+}
+
+/* ---- Glassmorphism ---- */
+.glass {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+  border-color: rgba(245, 11, 0, 0.4);
+  box-shadow: 0 0 30px rgba(245, 11, 0, 0.15);
+}
+
+/* ---- Neon glow button ---- */
+.btn-glow {
+  background: linear-gradient(135deg, #F50B00, #FF2D20);
+  color: #FFFFFF;
+  font-weight: 700;
+  padding: 12px 28px;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 20px rgba(245, 11, 0, 0.4);
+}
+
+.btn-glow:hover {
+  box-shadow: 0 0 40px rgba(245, 11, 0, 0.7);
+  transform: translateY(-2px);
+}
+
+.btn-ghost {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #FFFFFF;
+  font-weight: 700;
+  padding: 12px 28px;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.btn-ghost:hover {
+  border-color: rgba(245, 11, 0, 0.5);
+  background: rgba(245, 11, 0, 0.1);
+}
+
+/* ---- Mani Brand Text ---- */
+.mani-brand {
+  font-family: var(--font-orbitron), system-ui, sans-serif;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+.mani-red {
+  color: #F50B00;
+}
+
+.mani-white {
+  color: #FFFFFF;
+}
+
+/* ---- Scrollbar ---- */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0A0A0B;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #28282E;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #F50B00;
+}
+
+/* ---- Particle background ---- */
+.particles-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.particle {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: rgba(245, 11, 0, 0.4);
+  border-radius: 50%;
+  animation: floatUp linear infinite;
+}
+
+@keyframes floatUp {
+  0% {
+    transform: translateY(100vh) translateX(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-10vh) translateX(50px);
+    opacity: 0;
+  }
+}
+
+/* ---- Loading screen ---- */
+.loader-ring {
+  width: 60px;
+  height: 60px;
+  border: 3px solid rgba(245, 11, 0, 0.2);
+  border-top-color: #F50B00;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---- Scroll reveal ---- */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ---- Badge ---- */
+.badge-available {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.badge-unavailable {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.badge-offer {
+  background: rgba(245, 11, 0, 0.15);
+  color: #F50B00;
+  border: 1px solid rgba(245, 11, 0, 0.3);
+}
+
+/* ---- Input styles ---- */
+.input-mani {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 12px 16px;
+  color: #FFFFFF;
+  width: 100%;
+  transition: all 0.2s ease;
+  font-size: 15px;
+}
+
+.input-mani:focus {
+  outline: none;
+  border-color: rgba(245, 11, 0, 0.5);
+  box-shadow: 0 0 0 3px rgba(245, 11, 0, 0.1);
+}
+
+.input-mani::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}

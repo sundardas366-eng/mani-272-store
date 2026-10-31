@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 420" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0303"/>
+      <stop offset="50%" stop-color="#140505"/>
+      <stop offset="100%" stop-color="#050101"/>
+    </linearGradient>
+    <radialGradient id="centerGlow" cx="50%" cy="48%" r="45%">
+      <stop offset="0%" stop-color="#F50B00" stop-opacity="0.32"/>
+      <stop offset="55%" stop-color="#F50B00" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    <pattern id="hexGrid" width="30" height="52" patternUnits="userSpaceOnUse" patternTransform="scale(1)">
+      <path d="M15 0 L30 8.66 L30 26 L15 34.64 L0 26 L0 8.66 Z" fill="none" stroke="#F50B00" stroke-width="0.6" stroke-opacity="0.12"/>
+      <path d="M15 52 L30 43.34 L30 26 L15 17.36 L0 26 L0 43.34 Z" fill="none" stroke="#F50B00" stroke-width="0.6" stroke-opacity="0.12"/>
+    </pattern>
+  </defs>
+
+  <!-- Dark Background -->
+  <rect width="600" height="420" fill="url(#bgGrad)"/>
+  <rect width="600" height="420" fill="url(#hexGrid)"/>
+  <rect width="600" height="420" fill="url(#centerGlow)"/>
+
+  <!-- Tech Frame Borders -->
+  <path d="M 20 50 L 20 20 L 50 20" fill="none" stroke="#F50B00" stroke-width="3" filter="url(#glow)"/>
+  <path d="M 580 50 L 580 20 L 550 20" fill="none" stroke="#F50B00" stroke-width="3" filter="url(#glow)"/>
+  <path d="M 20 370 L 20 400 L 50 400" fill="none" stroke="#F50B00" stroke-width="3" filter="url(#glow)"/>
+  <path d="M 580 370 L 580 400 L 550 400" fill="none" stroke="#F50B00" stroke-width="3" filter="url(#glow)"/>
+
+  <!-- Top Status Bar -->
+  <line x1="60" y1="30" x2="540" y2="30" stroke="#331111" stroke-width="1"/>
+  <circle cx="70" cy="30" r="3" fill="#00ff66"/>
+  <text x="80" y="34" fill="#888888" font-family="'Courier New', monospace" font-size="10" letter-spacing="2">MANI 272 OFFICIAL PRODUCT</text>
+  <rect x="460" y="21" width="80" height="18" rx="4" fill="#F50B00" fill-opacity="0.2" stroke="#F50B00" stroke-width="1"/>
+  <text x="500" y="34" fill="#ff4444" font-family="'Courier New', monospace" font-size="9" font-weight="bold" text-anchor="middle" letter-spacing="1">EXE RUNTIME</text>
+
+  <!-- Central Visual Graphic -->
+  <g>
+    
+      <rect x="230" y="160" width="140" height="110" rx="10" fill="#120505" stroke="#F50B00" stroke-width="3" filter="url(#glow)"/>
+      <path d="M250 200 L270 200 M250 220 L310 220 M250 240 L290 240" stroke="#ff4444" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="340" cy="185" r="5" fill="#00ff66"/>
+      <circle cx="355" cy="185" r="5" fill="#F50B00"/>
+      <text x="300" y="310" fill="#ffffff" font-family="'Courier New', monospace" font-size="18" font-weight="bold" text-anchor="middle">.EXE</text>
+    
+  </g>
+
+  <!-- Bottom Details Bar -->
+  <rect x="30" y="340" width="540" height="52" rx="8" fill="#100303" fill-opacity="0.85" stroke="#F50B00" stroke-width="1.2"/>
+  <text x="50" y="362" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="900" letter-spacing="1">COVER-SILENT-EXE</text>
+  <text x="50" y="380" fill="#888888" font-family="'Courier New', monospace" font-size="10" letter-spacing="1.5">STANDALONE EXECUTABLE BUILD</text>
+  
+  <rect x="465" y="352" width="90" height="28" rx="6" fill="#F50B00" filter="url(#glow)"/>
+  <text x="510" y="371" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="900" text-anchor="middle" letter-spacing="1">PREMIUM</text>
+</svg>

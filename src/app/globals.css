@@ -193,21 +193,14 @@ body {
   transform: translateY(0) translateX(0) scale(1);
 }
 
-/* ---- Custom Animated Mouse Cursor ---- */
-@media (hover: hover) and (pointer: fine) {
-  body.has-custom-cursor,
-  body.has-custom-cursor a,
-  body.has-custom-cursor button,
-  body.has-custom-cursor [role="button"],
-  body.has-custom-cursor .cursor-pointer {
-    cursor: none !important;
-  }
+/* ---- Custom Animated Mouse Cursor & Trail ---- */
+/* Keep system mouse cursor fully visible so user never loses their pointer */
+body, a, button, [role="button"], .cursor-pointer {
+  cursor: auto;
+}
 
-  body.has-custom-cursor input,
-  body.has-custom-cursor textarea,
-  body.has-custom-cursor select {
-    cursor: text !important;
-  }
+a, button, [role="button"], .cursor-pointer {
+  cursor: pointer;
 }
 
 /* Cursor click ripple */

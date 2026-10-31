@@ -84,10 +84,8 @@ export function FeaturedSection() {
       </ScrollReveal>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-8">
         {products.map((p, i) => (
-          <ScrollReveal key={p.id}>
-            <div style={{ transitionDelay: `${i * 50}ms` }}>
-              <ProductCard product={p} />
-            </div>
+          <ScrollReveal key={p.id} delay={i * 70} direction="up">
+            <ProductCard product={p} />
           </ScrollReveal>
         ))}
       </div>
@@ -103,8 +101,8 @@ export function BestSellersSection() {
         <SectionHeader title="Best Sellers" subtitle="Most popular among our customers" />
       </ScrollReveal>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-8">
-        {products.map((p) => (
-          <ScrollReveal key={p.id}>
+        {products.map((p, i) => (
+          <ScrollReveal key={p.id} delay={i * 70} direction="up">
             <ProductCard product={p} />
           </ScrollReveal>
         ))}
@@ -121,8 +119,8 @@ export function SpecialOffersSection() {
         <SectionHeader title="Special Offers" subtitle="Limited-time deals on premium products" />
       </ScrollReveal>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-8">
-        {products.map((p) => (
-          <ScrollReveal key={p.id}>
+        {products.map((p, i) => (
+          <ScrollReveal key={p.id} delay={i * 70} direction="up">
             <ProductCard product={p} />
           </ScrollReveal>
         ))}
@@ -139,8 +137,8 @@ export function LatestProductsSection() {
         <SectionHeader title="Latest Products" subtitle="Newest additions to our catalog" />
       </ScrollReveal>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-8">
-        {products.map((p) => (
-          <ScrollReveal key={p.id}>
+        {products.map((p, i) => (
+          <ScrollReveal key={p.id} delay={i * 70} direction="up">
             <ProductCard product={p} />
           </ScrollReveal>
         ))}

@@ -5,6 +5,7 @@ import { Search, Filter } from "lucide-react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { ParticleBackground } from "@/components/animations/ParticleBackground";
+import { ScrollReveal } from "@/components/animations/ScrollReveal";
 import { ProductCard } from "@/components/products/ProductCard";
 import { PRODUCTS, CATEGORIES } from "@/data/products";
 import type { ProductCategory } from "@/types";
@@ -87,8 +88,10 @@ export default function ProductsPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           {filtered.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filtered.map((p) => (
-                <ProductCard key={p.id} product={p} />
+              {filtered.map((p, i) => (
+                <ScrollReveal key={p.id} delay={Math.min(i * 45, 360)} direction="up">
+                  <ProductCard product={p} />
+                </ScrollReveal>
               ))}
             </div>
           ) : (

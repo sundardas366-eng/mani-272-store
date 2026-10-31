@@ -273,7 +273,7 @@ export function TeamSection() {
     description: "Co-founder of MANI 272 STORE. Leading development, YouTube channel production and technical support.",
     discordUrl: "https://discord.com/users/1508220374033109190",
     discordId: "1508220374033109190",
-    photoUrl: "",
+    photoUrl: "/images/team/eagle-272-avatar.jpg",
   };
 
   return (

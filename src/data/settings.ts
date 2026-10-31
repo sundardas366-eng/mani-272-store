@@ -49,7 +49,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
     name: "Eagle 272",
     position: "CO-FOUNDER",
     description: "Co-Founder of MANI 272 STORE. Leading development, YouTube channel production, community operations and technical support.",
-    photoUrl: "",
+    photoUrl: "/images/team/eagle-272-avatar.jpg",
     discordUserId: "1508220374033109190",
     discordUrl: "https://discord.com/users/1508220374033109190",
   },

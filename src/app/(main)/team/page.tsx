@@ -51,8 +51,10 @@ const TEAM_MEMBERS: TeamMember[] = [
     name: "Eagle 272",
     role: "CO-FOUNDER",
     discordId: "1508220374033109190",
-    discordTag: "eagle272",
+    discordTag: "eagle.272",
     discordUrl: "https://discord.com/users/1508220374033109190",
+    photoUrl: "/images/team/eagle-272-avatar.jpg",
+    profileCardUrl: "/images/team/eagle-272-profile.jpg",
     youtubeUrl: "https://www.youtube.com/@eagle272-v4p",
     statusText: "Co-Founder | Media & Development",
     description:
@@ -70,7 +72,11 @@ const TEAM_MEMBERS: TeamMember[] = [
 
 export default function TeamPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [showProfileCard, setShowProfileCard] = useState(false);
+  const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
+
+  const toggleCard = (id: string) => {
+    setExpandedCards((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -206,31 +212,34 @@ export default function TeamPage() {
                         </button>
                       </div>
 
-                      {/* Official Discord Profile Preview for Server Owner */}
-                      {member.profileCardUrl && (
-                        <div className="mb-6 bg-mani-black/60 border border-white/10 rounded-2xl p-3 overflow-hidden">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-bold text-white/50 uppercase tracking-wider flex items-center gap-1.5">
-                              <ImageIcon className="w-3.5 h-3.5 text-mani-red" />
-                              Official Discord Profile Card
-                            </span>
-                            <button
-                              onClick={() => setShowProfileCard(!showProfileCard)}
-                              className="text-[10px] text-mani-red hover:underline font-bold"
-                            >
-                              {showProfileCard ? "Collapse" : "View Full Card"}
-                            </button>
+                      {/* Official Discord Profile Preview */}
+                      {member.profileCardUrl && (() => {
+                        const isExpanded = !!expandedCards[member.discordId];
+                        return (
+                          <div className="mb-6 bg-mani-black/60 border border-white/10 rounded-2xl p-3 overflow-hidden">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-[10px] font-bold text-white/50 uppercase tracking-wider flex items-center gap-1.5">
+                                <ImageIcon className="w-3.5 h-3.5 text-mani-red" />
+                                Official Discord Profile Card
+                              </span>
+                              <button
+                                onClick={() => toggleCard(member.discordId)}
+                                className="text-[10px] text-mani-red hover:underline font-bold"
+                              >
+                                {isExpanded ? "Collapse" : "View Full Card"}
+                              </button>
+                            </div>
+                            <div className={`overflow-hidden rounded-xl border border-white/10 transition-all duration-300 ${isExpanded ? "max-h-[500px]" : "max-h-36"}`}>
+                              <img
+                                src={member.profileCardUrl}
+                                alt={`${member.name} Discord Profile`}
+                                className="w-full object-cover object-top cursor-pointer hover:opacity-95"
+                                onClick={() => toggleCard(member.discordId)}
+                              />
+                            </div>
                           </div>
-                          <div className={`overflow-hidden rounded-xl border border-white/10 transition-all duration-300 ${showProfileCard ? "max-h-[500px]" : "max-h-36"}`}>
-                            <img
-                              src={member.profileCardUrl}
-                              alt={`${member.name} Discord Profile`}
-                              className="w-full object-cover object-top cursor-pointer hover:opacity-95"
-                              onClick={() => setShowProfileCard(!showProfileCard)}
-                            />
-                          </div>
-                        </div>
-                      )}
+                        );
+                      })()}
 
                       {/* Bio */}
                       <p className="text-white/60 text-sm leading-relaxed mb-6">

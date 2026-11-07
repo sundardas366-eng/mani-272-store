@@ -63,7 +63,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
 export const REVIEWS: Review[] = [];
 
 export const STATS = {
-  totalProducts: 24,
+  totalProducts: 13,
   totalUsers: 0,
   totalOrders: 0,
   totalRevenue: 0,

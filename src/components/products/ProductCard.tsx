@@ -182,10 +182,11 @@ export function ProductCard({ product }: ProductCardProps) {
 }
 
 export function ProductImage({ product }: { product: Product }) {
+  const fallback = `/images/products/${product.slug}.svg`;
   return (
     <div className="w-full h-full relative overflow-hidden flex items-center justify-center bg-mani-black">
       <img
-        src={product.image}
+        src={product.image || fallback}
         alt={product.name}
         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         loading="lazy"
@@ -193,7 +194,7 @@ export function ProductImage({ product }: { product: Product }) {
           // Fallback if image fails to load
           const target = e.currentTarget;
           target.onerror = null;
-          target.src = "/images/products/aimkill.svg";
+          target.src = "/images/products/silent-aim.png";
         }}
       />
     </div>

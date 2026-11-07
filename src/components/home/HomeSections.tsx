@@ -55,7 +55,7 @@ export function HeroSection() {
           transition={{ duration: 0.6, delay: 0.3 }}
           className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-16"
         >
-          <StatCard icon={<Package className="w-5 h-5" />} value="24" label="Products" />
+          <StatCard icon={<Package className="w-5 h-5" />} value="13" label="Products" />
           <StatCard icon={<ShoppingBag className="w-5 h-5" />} value="5" label="Categories" />
           <StatCard icon={<span className="text-lg">⚡</span>} value="24/7" label="Support" />
           <StatCard icon={<span className="text-lg">🔒</span>} value="100%" label="Secure" />
@@ -351,7 +351,7 @@ export function StatsSection() {
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
       <ScrollReveal>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <BigStat value="24" label="Total Products" />
+          <BigStat value="13" label="Total Products" />
           <BigStat value="5" label="Categories" />
           <BigStat value="0" label="Happy Customers" />
           <BigStat value="0" label="Orders Delivered" />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Search, Filter } from "lucide-react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
@@ -8,14 +8,26 @@ import { ParticleBackground } from "@/components/animations/ParticleBackground";
 import { ScrollReveal } from "@/components/animations/ScrollReveal";
 import { ProductCard } from "@/components/products/ProductCard";
 import { PRODUCTS, CATEGORIES } from "@/data/products";
-import type { ProductCategory } from "@/types";
+import type { Product, ProductCategory } from "@/types";
 
 export default function ProductsPage() {
   const [search, setSearch] = useState("");
   const [activeCat, setActiveCat] = useState<string>("all");
+  const [products, setProducts] = useState<Product[]>(PRODUCTS);
+
+  useEffect(() => {
+    fetch("/api/products")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.products)) {
+          setProducts(data.products);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const filtered = useMemo(() => {
-    return PRODUCTS.filter((p) => {
+    return products.filter((p) => {
       const matchCat = activeCat === "all" || p.category === activeCat;
       const matchSearch =
         !search ||
@@ -23,7 +35,7 @@ export default function ProductsPage() {
         p.description.toLowerCase().includes(search.toLowerCase());
       return matchCat && matchSearch;
     });
-  }, [search, activeCat]);
+  }, [products, search, activeCat]);
 
   return (
     <>

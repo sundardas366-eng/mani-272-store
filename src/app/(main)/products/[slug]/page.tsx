@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ShoppingCart, MessageCircle, Youtube, ExternalLink, BookOpen, CheckCircle2, XCircle, Star, Zap, Crown } from "lucide-react";
@@ -19,10 +19,23 @@ import toast from "react-hot-toast";
 
 export default function ProductDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
-  const product = getProductBySlug(slug);
+  const initialProduct = getProductBySlug(slug);
+  const [product, setProduct] = useState(initialProduct);
   const router = useRouter();
   const addItem = useCartStore((s) => s.addItem);
   const [selectedTier, setSelectedTier] = useState<DurationPrice>(DEFAULT_PRICING[3]); // default 30 days
+
+  useEffect(() => {
+    if (!slug) return;
+    fetch(`/api/products/${slug}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.product) {
+          setProduct(data.product);
+        }
+      })
+      .catch((err) => console.warn("Failed to fetch product:", err));
+  }, [slug]);
 
   if (!product) {
     return (
@@ -82,7 +95,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ slug: 
             {/* Image */}
             <div className="glass-card rounded-3xl p-8 relative overflow-hidden group">
               <div className="absolute inset-0 bg-mani-red/5 group-hover:bg-mani-red/10 transition-all duration-500" />
-              <div className="aspect-square relative z-10">
+              <div className="aspect-[16/10] sm:aspect-video relative z-10 rounded-2xl overflow-hidden">
                 <ProductImage product={product} />
               </div>
               {/* Glowing border on hover */}

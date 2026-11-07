@@ -2,57 +2,68 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, AlertTriangle, Lock } from "lucide-react";
+import { AlertCircle, Lock, ShieldCheck, Zap, ArrowRight } from "lucide-react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { ParticleBackground } from "@/components/animations/ParticleBackground";
 import { useCartStore } from "@/store/cart";
-import { formatPrice, generateOrderId } from "@/lib/utils";
-import { PRODUCTS } from "@/data/products";
+import { formatPrice } from "@/lib/utils";
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, getTotal, clearCart } = useCartStore();
   const total = getTotal();
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [contact, setContact] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("upi");
+  const [discordId, setDiscordId] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("fampay_upi");
   const [processing, setProcessing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const handleCheckout = (e: React.FormEvent) => {
+  const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !email || !contact) return;
     setProcessing(true);
+    setErrorMessage("");
 
-    // DEMO CHECKOUT — clearly marked as demo.
-    // When a real payment gateway (e.g. Stripe) is configured,
-    // replace this with a server-side payment verification flow.
-    setTimeout(() => {
-      const orderId = generateOrderId();
-      // Save order to localStorage (demo only — replace with database in production)
-      const orders = JSON.parse(localStorage.getItem("mani-272-orders") || "[]");
-      orders.push({
-        id: orderId,
-        items: items.map((i) => ({
-          productId: i.product.id,
-          productName: i.product.name,
-          price: i.product.price,
-          quantity: i.quantity,
-        })),
-        total,
-        status: "pending",
-        paymentMethod,
-        createdAt: new Date().toISOString(),
-        customerName: name,
-        customerEmail: email,
+    try {
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerName: name.trim(),
+          customerEmail: email.trim(),
+          contact: contact.trim(),
+          discordId: discordId.trim(),
+          paymentMethod,
+          baseAmount: total,
+          items: items.map((i) => ({
+            productId: i.product.id,
+            productName: i.product.name,
+            duration: i.duration,
+            durationLabel: i.durationLabel,
+            priceINR: i.priceINR || i.product.price,
+            quantity: i.quantity,
+          })),
+        }),
       });
-      localStorage.setItem("mani-272-orders", JSON.stringify(orders));
 
-      clearCart();
+      const data = await res.json();
+
+      if (data.success && data.order?.orderId) {
+        clearCart();
+        router.push(`/order-confirmation?id=${data.order.orderId}`);
+      } else {
+        setErrorMessage(data.error || "Failed to create order. Please try again.");
+        setProcessing(false);
+      }
+    } catch (err: any) {
+      console.error("Checkout request failed:", err);
+      setErrorMessage("Network error. Please try again.");
       setProcessing(false);
-      router.push(`/order-confirmation?id=${orderId}`);
-    }, 1500);
+    }
   };
 
   if (items.length === 0) {
@@ -61,8 +72,14 @@ export default function CheckoutPage() {
         <Navbar />
         <main className="min-h-screen flex items-center justify-center">
           <div className="text-center">
-            <div className="text-4xl mb-4">🛒</div>
-            <p className="text-white/40 mb-4">Your cart is empty</p>
+            <div className="text-5xl mb-4">🛒</div>
+            <p className="text-white/40 mb-4 text-lg">Your cart is empty</p>
+            <button
+              onClick={() => router.push("/products")}
+              className="btn-glow inline-flex items-center gap-2"
+            >
+              Browse Products <ArrowRight className="w-4 h-4" />
+            </button>
           </div>
         </main>
         <Footer />
@@ -74,107 +91,217 @@ export default function CheckoutPage() {
     <>
       <ParticleBackground />
       <Navbar />
-      <main className="relative z-10 min-h-screen pt-8">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="mani-brand text-2xl md:text-3xl mb-8">
-            <span className="mani-red">Check</span><span className="mani-white">out</span>
-          </h1>
+      <main className="relative z-10 min-h-screen pt-12 pb-24">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mb-8">
+            <h1 className="mani-brand text-3xl md:text-4xl">
+              <span className="mani-red">Secure</span> <span className="mani-white">Checkout</span>
+            </h1>
+            <p className="text-white/50 text-sm mt-1">
+              Automated 24/7 instant key delivery powered by FamPay UPI
+            </p>
+          </div>
 
-          {/* Demo notice */}
-          <div className="glass-card rounded-xl p-4 mb-6 border-amber-500/30 flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+          {/* Automated System Notice */}
+          <div className="glass-card rounded-2xl p-4 mb-8 border-mani-red/30 bg-mani-red/5 flex items-start gap-3">
+            <Zap className="w-5 h-5 text-mani-red flex-shrink-0 mt-0.5 animate-pulse" />
             <div>
-              <p className="text-amber-500 font-bold text-sm">DEMO CHECKOUT</p>
-              <p className="text-white/50 text-xs mt-1">
-                This is a demo checkout. No real payment is processed. When a payment
-                gateway (e.g. Stripe) is configured, this will be replaced with secure
-                server-side payment verification.
+              <p className="text-mani-red font-bold text-sm tracking-wide">
+                INSTANT AUTOMATED VERIFICATION ENABLED
+              </p>
+              <p className="text-white/60 text-xs mt-1 leading-relaxed">
+                When you place your order, you will receive an exact paise amount (e.g. ₹{total}.37). 
+                Once you transfer via UPI, our server checks the confirmation email and delivers your license key 
+                and download link within seconds.
               </p>
             </div>
           </div>
 
-          <form onSubmit={handleCheckout} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Form */}
-            <div className="lg:col-span-2 space-y-4">
-              <div className="glass-card rounded-2xl p-6">
-                <h2 className="font-bold text-white mb-4">Customer Information</h2>
+          {errorMessage && (
+            <div className="glass-card rounded-xl p-4 mb-6 border-red-500/50 bg-red-500/10 flex items-center gap-3 text-red-400 text-sm">
+              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleCheckout} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Form Fields */}
+            <div className="lg:col-span-2 space-y-6">
+              <div className="glass-card rounded-2xl p-6 sm:p-8">
+                <h2 className="font-bold text-white text-lg mb-6 flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-mani-red" /> Contact & Delivery Information
+                </h2>
                 <div className="space-y-4">
                   <div>
-                    <label className="text-xs font-bold text-white/40 uppercase tracking-wider mb-1.5 block">Full Name</label>
-                    <input type="text" required value={name} onChange={(e) => setName(e.target.value)} className="input-mani" placeholder="Your name" />
+                    <label className="text-xs font-bold text-white/50 uppercase tracking-wider mb-2 block">
+                      Full Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="input-mani w-full"
+                      placeholder="e.g. Mani Gamer"
+                    />
                   </div>
+
                   <div>
-                    <label className="text-xs font-bold text-white/40 uppercase tracking-wider mb-1.5 block">Email</label>
-                    <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="input-mani" placeholder="you@example.com" />
+                    <label className="text-xs font-bold text-white/50 uppercase tracking-wider mb-2 block">
+                      Email Address (For Key Delivery) *
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="input-mani w-full"
+                      placeholder="you@example.com"
+                    />
                   </div>
+
                   <div>
-                    <label className="text-xs font-bold text-white/40 uppercase tracking-wider mb-1.5 block">Contact (Phone / Discord / Telegram)</label>
-                    <input type="text" required value={contact} onChange={(e) => setContact(e.target.value)} className="input-mani" placeholder="Your contact" />
+                    <label className="text-xs font-bold text-white/50 uppercase tracking-wider mb-2 block">
+                      Phone / Telegram / WhatsApp *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={contact}
+                      onChange={(e) => setContact(e.target.value)}
+                      className="input-mani w-full"
+                      placeholder="+91 98765 43210 or @username"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-white/50 uppercase tracking-wider mb-2 block flex items-center justify-between">
+                      <span>Discord User ID (Optional)</span>
+                      <span className="text-[10px] text-white/40 lowercase">for Discord role & DM</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={discordId}
+                      onChange={(e) => setDiscordId(e.target.value)}
+                      className="input-mani w-full font-mono text-sm"
+                      placeholder="e.g. 1457931837769908467"
+                    />
                   </div>
                 </div>
               </div>
 
-              <div className="glass-card rounded-2xl p-6">
-                <h2 className="font-bold text-white mb-4">Payment Method</h2>
-                <div className="grid grid-cols-2 gap-3">
+              {/* Payment Methods */}
+              <div className="glass-card rounded-2xl p-6 sm:p-8">
+                <h2 className="font-bold text-white text-lg mb-4">Select Payment Option</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {[
-                    { id: "upi", label: "UPI" },
-                    { id: "bank", label: "Bank Transfer" },
-                    { id: "card", label: "Card" },
-                    { id: "crypto", label: "Crypto" },
+                    {
+                      id: "fampay_upi",
+                      label: "FamPay UPI (Instant Auto-Verify)",
+                      badge: "FASTEST ⚡",
+                      desc: "Pay via GPay, PhonePe, Paytm, or FamPay with auto-key delivery",
+                    },
+                    {
+                      id: "upi_manual",
+                      label: "Standard UPI / QR",
+                      badge: "POPULAR",
+                      desc: "Scan QR code on the next screen and receive license key instantly",
+                    },
                   ].map((m) => (
                     <label
                       key={m.id}
-                      className={`cursor-pointer rounded-xl p-4 text-center text-sm font-bold transition-all border ${
+                      className={`cursor-pointer rounded-xl p-4 text-left transition-all border block relative ${
                         paymentMethod === m.id
-                          ? "border-mani-red bg-mani-red/10 text-mani-red"
-                          : "border-white/5 text-white/40 hover:border-white/20"
+                          ? "border-mani-red bg-mani-red/10 text-white shadow-lg shadow-mani-red/10"
+                          : "border-white/10 text-white/60 hover:border-white/20 bg-black/20"
                       }`}
                     >
-                      <input type="radio" name="payment" value={m.id} checked={paymentMethod === m.id} onChange={(e) => setPaymentMethod(e.target.value)} className="hidden" />
-                      {m.label}
+                      <input
+                        type="radio"
+                        name="payment"
+                        value={m.id}
+                        checked={paymentMethod === m.id}
+                        onChange={(e) => setPaymentMethod(e.target.value)}
+                        className="hidden"
+                      />
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-sm text-white">{m.label}</span>
+                        {m.badge && (
+                          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-mani-red text-white">
+                            {m.badge}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-white/50">{m.desc}</p>
                     </label>
                   ))}
                 </div>
               </div>
             </div>
 
-            {/* Summary */}
+            {/* Order Summary Column */}
             <div>
-              <div className="glass-card rounded-2xl p-6 sticky top-20">
-                <h2 className="font-bold text-white mb-4">Order Summary</h2>
-                <div className="space-y-2 mb-4 max-h-48 overflow-y-auto">
+              <div className="glass-card rounded-2xl p-6 sm:p-8 sticky top-24">
+                <h2 className="font-bold text-white text-lg mb-4">Order Summary</h2>
+
+                <div className="space-y-3 mb-6 max-h-56 overflow-y-auto pr-1">
                   {items.map((item) => (
-                    <div key={item.product.id} className="flex justify-between text-sm">
-                      <span className="text-white/50">{item.product.name} × {item.quantity}</span>
-                      <span className="text-white">{formatPrice(item.product.price * item.quantity)}</span>
+                    <div
+                      key={item.product.id}
+                      className="flex justify-between items-start text-sm border-b border-white/5 pb-2"
+                    >
+                      <div>
+                        <span className="text-white font-medium block">{item.product.name}</span>
+                        <span className="text-white/40 text-xs">
+                          {item.durationLabel || item.duration || "Standard"} × {item.quantity}
+                        </span>
+                      </div>
+                      <span className="text-white font-semibold">
+                        {formatPrice((item.priceINR || item.product.price) * item.quantity)}
+                      </span>
                     </div>
                   ))}
                 </div>
-                <div className="border-t border-white/5 pt-4 mb-6">
-                  <div className="flex justify-between items-center">
-                    <span className="text-lg font-bold text-white">Total</span>
-                    <span className="text-2xl font-black mani-red">{formatPrice(total)}</span>
+
+                <div className="border-t border-white/10 pt-4 mb-6">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-sm text-white/60">Subtotal</span>
+                    <span className="text-sm text-white">{formatPrice(total)}</span>
                   </div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-xs text-mani-red font-medium">Automated Verification Fee</span>
+                    <span className="text-xs text-emerald-400 font-bold">FREE (0.00)</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t border-white/5">
+                    <span className="text-base font-bold text-white">Estimated Total</span>
+                    <span className="text-2xl font-black text-mani-red">{formatPrice(total)}</span>
+                  </div>
+                  <p className="text-[11px] text-white/40 mt-1">
+                    *Exact paise amount (1-99 paise) assigned on next page for instant auto-detection.
+                  </p>
                 </div>
+
                 <button
                   type="submit"
                   disabled={processing}
-                  className="btn-glow w-full inline-flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="btn-glow w-full inline-flex items-center justify-center gap-2 py-3.5 text-base font-bold disabled:opacity-50"
                 >
                   {processing ? (
                     <>
-                      <div className="loader-ring !w-5 !h-5 !border-2" /> Processing...
+                      <div className="loader-ring !w-5 !h-5 !border-2" /> Generating Payment QR...
                     </>
                   ) : (
                     <>
-                      <Lock className="w-4 h-4" /> Place Order
+                      <Lock className="w-4 h-4" /> Proceed to Pay {formatPrice(total)}
                     </>
                   )}
                 </button>
-                <p className="text-white/20 text-[10px] text-center mt-3">
-                  By placing this order, you agree to our terms of service.
-                </p>
+
+                <div className="mt-4 pt-4 border-t border-white/5 text-center">
+                  <p className="text-white/30 text-[11px] flex items-center justify-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> 100% Secure & Encrypted Transactions
+                  </p>
+                </div>
               </div>
             </div>
           </form>

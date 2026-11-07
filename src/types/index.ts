@@ -17,6 +17,10 @@ export interface ProductLinks {
   demo?: string;
   documentation?: string;
   custom?: string;
+  mega?: string;
+  mediafire?: string;
+  googleDrive?: string;
+  download?: string;
 }
 
 // ---- Duration-based pricing ----

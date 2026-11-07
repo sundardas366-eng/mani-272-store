@@ -53,6 +53,14 @@ export default function CheckoutPage() {
       const data = await res.json();
 
       if (data.success && data.order?.orderId) {
+        // Cache order in localStorage so it can never be lost
+        try {
+          localStorage.setItem("mani_last_order", JSON.stringify(data.order));
+          localStorage.setItem(`mani_order_${data.order.orderId}`, JSON.stringify(data.order));
+        } catch (e) {
+          console.warn("Could not save order in localStorage:", e);
+        }
+
         clearCart();
         router.push(`/order-confirmation?id=${data.order.orderId}`);
       } else {

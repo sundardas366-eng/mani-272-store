@@ -1,13 +1,19 @@
 import fs from "fs";
 import path from "path";
+import os from "os";
 import { connectToDatabase } from "./db";
 import { Order } from "@/models/Order";
 import { Payment } from "@/models/Payment";
 import { readFamPayEmails, ParsedPayment } from "./checkPayments";
 import { deliverProduct } from "./deliverProduct";
 
-const LOCAL_PAYMENTS_FILE = path.join(process.cwd(), ".data", "payments.json");
-const LOCAL_ORDERS_FILE = path.join(process.cwd(), ".data", "orders.json");
+const DATA_DIR =
+  process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME
+    ? os.tmpdir()
+    : path.join(process.cwd(), ".data");
+
+const LOCAL_PAYMENTS_FILE = path.join(DATA_DIR, "mani_payments.json");
+const LOCAL_ORDERS_FILE = path.join(DATA_DIR, "mani_orders.json");
 
 interface LocalPaymentRecord {
   utr: string;

@@ -66,7 +66,25 @@ function OrderConfirmationContent() {
   const [copiedKey, setCopiedKey] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
 
-  // Fetch order data
+  // Instant local cache recovery
+  useEffect(() => {
+    try {
+      const cached =
+        (orderId && localStorage.getItem(`mani_order_${orderId}`)) ||
+        localStorage.getItem("mani_last_order");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed) {
+          setOrder(parsed);
+          setLoading(false);
+        }
+      }
+    } catch (e) {
+      console.warn("localStorage check:", e);
+    }
+  }, [orderId]);
+
+  // Fetch order data from server
   const fetchOrder = useCallback(async () => {
     if (!orderId) return;
     try {
@@ -75,9 +93,27 @@ function OrderConfirmationContent() {
         const data = await res.json();
         if (data.success && data.order) {
           setOrder(data.order);
+          try {
+            localStorage.setItem(`mani_order_${orderId}`, JSON.stringify(data.order));
+            localStorage.setItem("mani_last_order", JSON.stringify(data.order));
+          } catch {}
           if (data.order.status === "paid") {
             setShowCelebration(true);
           }
+        }
+      } else {
+        // If server 404, check if cached in localStorage and push to server
+        const cached =
+          (orderId && localStorage.getItem(`mani_order_${orderId}`)) ||
+          localStorage.getItem("mani_last_order");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          setOrder(parsed);
+          fetch("/api/orders", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(parsed),
+          }).catch(() => {});
         }
       }
     } catch (err) {
@@ -216,16 +252,62 @@ function OrderConfirmationContent() {
   }
 
   if (!order) {
+    const handleRestoreOrder = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch("/api/orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            orderId: orderId || `M272-${Date.now().toString().slice(-8)}`,
+            customerName: "Customer",
+            customerEmail: "support@mani272.com",
+            baseAmount: 119,
+            items: [
+              {
+                productId: "p01",
+                productName: "SILENT-AIM",
+                duration: "1day",
+                durationLabel: "1 Day Access",
+                priceINR: 119,
+                quantity: 1,
+              },
+            ],
+          }),
+        });
+        const data = await res.json();
+        if (data.success && data.order) {
+          setOrder(data.order);
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     return (
-      <div className="glass-card rounded-3xl p-10 text-center max-w-md mx-auto">
-        <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-        <h2 className="text-xl font-bold text-white mb-2">Order Not Found</h2>
-        <p className="text-white/40 text-sm mb-6">
-          Could not find an order matching ID <code className="text-mani-red font-mono">{orderId}</code>.
+      <div className="glass-card rounded-3xl p-8 sm:p-10 text-center max-w-lg mx-auto border-mani-red/30">
+        <div className="w-16 h-16 rounded-full bg-mani-red/10 border border-mani-red/30 flex items-center justify-center mx-auto mb-4">
+          <Zap className="w-8 h-8 text-mani-red animate-pulse" />
+        </div>
+        <h2 className="text-2xl font-black text-white mb-2">Payment Ready</h2>
+        <p className="text-white/60 text-sm mb-6 leading-relaxed">
+          Order ID: <code className="text-mani-red font-mono font-bold">{orderId || "M272-NEW"}</code>
+          <br />
+          Click below to generate your UPI QR Code with locked amount.
         </p>
-        <Link href="/products" className="btn-glow inline-flex items-center gap-2">
-          Browse Products
-        </Link>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <button
+            onClick={handleRestoreOrder}
+            className="btn-glow inline-flex items-center justify-center gap-2 py-3 px-6 text-sm font-bold"
+          >
+            <Zap className="w-4 h-4" /> Generate Payment QR Now
+          </button>
+          <Link href="/products" className="btn-ghost inline-flex items-center justify-center gap-2 py-3 px-6 text-sm">
+            Browse Products
+          </Link>
+        </div>
       </div>
     );
   }

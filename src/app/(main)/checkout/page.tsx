@@ -2,18 +2,21 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, Lock, ShieldCheck, Zap, ArrowRight } from "lucide-react";
+import { AlertCircle, Lock, ShieldCheck, Zap, ArrowRight, UserCheck } from "lucide-react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { ParticleBackground } from "@/components/animations/ParticleBackground";
+import { LampLoginForm } from "@/components/auth/LampLoginForm";
 import { useCartStore } from "@/store/cart";
 import { formatPrice } from "@/lib/utils";
+import toast from "react-hot-toast";
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, getTotal, clearCart } = useCartStore();
   const total = getTotal();
 
+  const [currentUser, setCurrentUser] = useState<{ email: string; name: string } | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [contact, setContact] = useState("");
@@ -22,14 +25,17 @@ export default function CheckoutPage() {
   const [processing, setProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  // Auto-fill from localStorage if user is logged in
+  // Check login session on mount
   useEffect(() => {
     try {
       const stored = localStorage.getItem("mani-272-user");
       if (stored) {
         const u = JSON.parse(stored);
-        if (u?.email) setEmail(u.email);
-        if (u?.name) setName(u.name);
+        if (u?.email) {
+          setCurrentUser(u);
+          setEmail(u.email);
+          setName(u.name || u.email.split("@")[0]);
+        }
       }
       const savedEmail = localStorage.getItem("mani_customer_email");
       if (savedEmail && !email) setEmail(savedEmail);
@@ -38,12 +44,29 @@ export default function CheckoutPage() {
     } catch {}
   }, []);
 
+  const handleLogout = () => {
+    try {
+      localStorage.removeItem("mani-272-user");
+    } catch {}
+    setCurrentUser(null);
+    setEmail("");
+    setName("");
+    toast.success("Signed out");
+  };
+
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim() || !contact.trim()) {
-      setErrorMessage("Please fill all required fields marked with *");
+
+    const finalEmail = (email || (currentUser ? currentUser.email : "")).trim();
+    const finalName = (name || (currentUser ? currentUser.name : "") || (finalEmail ? finalEmail.split("@")[0] : "Customer")).trim();
+    const finalContact = (contact || "Instant Key Delivery").trim();
+
+    if (!finalEmail) {
+      setErrorMessage("Please sign in or enter your delivery email above.");
+      toast.error("Please sign in or provide delivery email");
       return;
     }
+
     setProcessing(true);
     setErrorMessage("");
 
@@ -52,9 +75,9 @@ export default function CheckoutPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          customerName: name.trim(),
-          customerEmail: email.trim(),
-          contact: contact.trim(),
+          customerName: finalName,
+          customerEmail: finalEmail,
+          contact: finalContact,
           discordId: discordId.trim(),
           paymentMethod,
           baseAmount: total,
@@ -76,8 +99,8 @@ export default function CheckoutPage() {
         try {
           localStorage.setItem("mani_last_order", JSON.stringify(data.order));
           localStorage.setItem(`mani_order_${data.order.orderId}`, JSON.stringify(data.order));
-          localStorage.setItem("mani_customer_email", email.trim());
-          localStorage.setItem("mani_customer_name", name.trim());
+          localStorage.setItem("mani_customer_email", finalEmail);
+          localStorage.setItem("mani_customer_name", finalName);
         } catch (e) {
           console.warn("Could not save order in localStorage:", e);
         }
@@ -153,71 +176,88 @@ export default function CheckoutPage() {
             </div>
           )}
 
-          <form onSubmit={handleCheckout} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Form Fields: Clean Contact & Delivery Information */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Left Column: Light On/Off Lamp Login or Authenticated Profile */}
             <div className="lg:col-span-2 space-y-6">
-              <div className="glass-card rounded-2xl p-6 sm:p-8">
-                <h2 className="font-bold text-white text-lg mb-6 flex items-center gap-2">
-                  <ShieldCheck className="w-5 h-5 text-mani-red" /> Contact & Delivery Information
-                </h2>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-xs font-bold text-white/50 uppercase tracking-wider mb-2 block">
-                      Full Name *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="input-mani w-full"
-                      placeholder="e.g. Sundar Das"
-                    />
+              {currentUser ? (
+                /* Authenticated Profile */
+                <div className="glass-card rounded-2xl p-6 sm:p-7 border-mani-red/40 bg-black/75 shadow-lg shadow-mani-red/10">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-mani-red to-red-950 border border-mani-red/60 flex items-center justify-center font-black text-white text-lg shadow-md shadow-mani-red/20">
+                        {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : "U"}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h2 className="font-bold text-white text-base">
+                            {currentUser.name || "Customer Account"}
+                          </h2>
+                          <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                            <UserCheck className="w-3 h-3" /> VERIFIED
+                          </span>
+                        </div>
+                        <p className="text-white/40 text-xs mt-0.5 font-mono">{currentUser.email}</p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="text-xs text-white/40 hover:text-mani-red transition self-start sm:self-auto"
+                    >
+                      Switch Account / Sign Out
+                    </button>
                   </div>
 
-                  <div>
-                    <label className="text-xs font-bold text-white/50 uppercase tracking-wider mb-2 block">
-                      Email Address (For Key Delivery) *
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="input-mani w-full font-mono text-sm"
-                      placeholder="sundardas366@gmail.com"
-                    />
-                  </div>
+                  <div className="mt-4 space-y-3.5">
+                    <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between text-xs">
+                      <span className="text-white/50">Key Delivery Destination:</span>
+                      <span className="font-mono text-mani-red font-bold text-sm">{currentUser.email}</span>
+                    </div>
 
-                  <div>
-                    <label className="text-xs font-bold text-white/50 uppercase tracking-wider mb-2 block">
-                      Phone / Telegram / WhatsApp *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={contact}
-                      onChange={(e) => setContact(e.target.value)}
-                      className="input-mani w-full"
-                      placeholder="+91 98765 43210 or @username"
-                    />
-                  </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      <div>
+                        <label className="text-[10px] font-bold text-white/50 uppercase tracking-wider mb-1.5 block">
+                          Phone / WhatsApp / Telegram
+                        </label>
+                        <input
+                          type="text"
+                          value={contact}
+                          onChange={(e) => setContact(e.target.value)}
+                          className="input-mani w-full text-xs !py-2"
+                          placeholder="+91 98765 43210 or @username"
+                        />
+                      </div>
 
-                  <div>
-                    <label className="text-xs font-bold text-white/50 uppercase tracking-wider mb-2 block flex items-center justify-between">
-                      <span>Discord User ID (Optional)</span>
-                      <span className="text-[10px] text-white/40 lowercase">for Discord role & DM</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={discordId}
-                      onChange={(e) => setDiscordId(e.target.value)}
-                      className="input-mani w-full font-mono text-sm"
-                      placeholder="e.g. 1457931837769908467"
-                    />
+                      <div>
+                        <label className="text-[10px] font-bold text-white/50 uppercase tracking-wider mb-1.5 block flex items-center justify-between">
+                          <span>Discord ID (Optional)</span>
+                          <span className="text-[10px] text-white/40 lowercase">for role & DM</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={discordId}
+                          onChange={(e) => setDiscordId(e.target.value)}
+                          className="input-mani w-full font-mono text-xs !py-2"
+                          placeholder="e.g. 1457931837769908467"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                /* LIGHT ON-OFF LAMP LOGIN COMPONENT EMBEDDED DIRECTLY IN CHECKOUT */
+                <div className="glass-card rounded-2xl p-4 sm:p-6 border-mani-red/35 bg-black/80 shadow-xl shadow-mani-red/10">
+                  <LampLoginForm
+                    isEmbedded={true}
+                    onSuccess={(u) => {
+                      setCurrentUser(u);
+                      setEmail(u.email);
+                      setName(u.name);
+                    }}
+                  />
+                </div>
+              )}
 
               {/* Payment Methods */}
               <div className="glass-card rounded-2xl p-6 sm:p-8">
@@ -311,7 +351,8 @@ export default function CheckoutPage() {
                 </div>
 
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={handleCheckout}
                   disabled={processing}
                   className="btn-glow w-full inline-flex items-center justify-center gap-2 py-3.5 text-base font-bold disabled:opacity-50"
                 >
@@ -333,7 +374,7 @@ export default function CheckoutPage() {
                 </div>
               </div>
             </div>
-          </form>
+          </div>
         </div>
       </main>
       <Footer />

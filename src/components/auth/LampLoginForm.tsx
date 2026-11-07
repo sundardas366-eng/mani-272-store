@@ -9,6 +9,7 @@ interface LampLoginFormProps {
   onSuccess?: (user: { email: string; name: string; provider?: string }) => void;
   redirectUrl?: string;
   isEmbedded?: boolean;
+  initialMode?: "signin" | "signup";
 }
 
 // Authentic Discord Icon
@@ -48,9 +49,10 @@ export function LampLoginForm({
   onSuccess,
   redirectUrl = "/dashboard",
   isEmbedded = false,
+  initialMode = "signin",
 }: LampLoginFormProps) {
   const [isOn, setIsOn] = useState(true);
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<"signin" | "signup">(initialMode);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

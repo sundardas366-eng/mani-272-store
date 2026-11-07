@@ -95,15 +95,17 @@ function OrderConfirmationContent() {
   useEffect(() => {
     if (!order) return;
 
-    const upiId = order.fampayUpiId || "mani272@fam";
+    const upiId = (order.fampayUpiId || "das360s@fam").trim();
     const amount = order.payAmountRupees || (order.payAmount / 100).toFixed(2);
-    const upiUri = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=MANI%20272%20STORE&am=${encodeURIComponent(
-      amount
-    )}&cu=INR&tn=Order%20${encodeURIComponent(order.orderId)}`;
+    const cleanOrderId = order.orderId.replace(/[^a-zA-Z0-9]/g, "");
+
+    // NPCI UPI Standard Scheme with pre-filled & locked amount:
+    const upiUri = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=MANI272&am=${amount}&cu=INR&tn=Order${cleanOrderId}`;
 
     QRCode.toDataURL(upiUri, {
-      width: 260,
-      margin: 1,
+      width: 320,
+      margin: 2,
+      errorCorrectionLevel: "M",
       color: {
         dark: "#000000",
         light: "#ffffff",
@@ -228,11 +230,10 @@ function OrderConfirmationContent() {
     );
   }
 
-  const fampayUpi = order.fampayUpiId || "mani272@fam";
+  const fampayUpi = (order.fampayUpiId || "das360s@fam").trim();
   const exactAmount = order.payAmountRupees || (order.payAmount / 100).toFixed(2);
-  const upiDeepLink = `upi://pay?pa=${encodeURIComponent(fampayUpi)}&pn=MANI%20272%20STORE&am=${encodeURIComponent(
-    exactAmount
-  )}&cu=INR&tn=Order%20${encodeURIComponent(order.orderId)}`;
+  const cleanOrderId = order.orderId.replace(/[^a-zA-Z0-9]/g, "");
+  const upiDeepLink = `upi://pay?pa=${encodeURIComponent(fampayUpi)}&pn=MANI272&am=${exactAmount}&cu=INR&tn=Order${cleanOrderId}`;
 
   return (
     <div className="max-w-3xl mx-auto w-full">
@@ -411,9 +412,12 @@ function OrderConfirmationContent() {
                   </div>
                 )}
               </div>
-              <p className="text-xs font-bold text-white mb-2">
+              <p className="text-xs font-bold text-white mb-1">
                 Scan with any UPI App
               </p>
+              <span className="text-[11px] text-emerald-400 font-semibold block mb-2">
+                🔒 Amount is pre-locked to ₹{exactAmount} (Cannot be altered)
+              </span>
               <div className="flex flex-wrap gap-2 justify-center text-[11px] text-white/50 font-medium">
                 <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10">FamPay</span>
                 <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10">Google Pay</span>
@@ -421,12 +425,12 @@ function OrderConfirmationContent() {
                 <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10">Paytm</span>
               </div>
 
-              {/* Mobile Deep Link */}
+              {/* Direct UPI App Link */}
               <a
                 href={upiDeepLink}
-                className="mt-4 w-full py-2.5 px-4 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition flex items-center justify-center gap-2 md:hidden"
+                className="mt-4 w-full py-2.5 px-4 rounded-xl bg-mani-red/20 hover:bg-mani-red/30 border border-mani-red/40 text-white text-xs font-bold transition flex items-center justify-center gap-2"
               >
-                <Zap className="w-3.5 h-3.5 text-mani-red" /> Pay via Installed UPI App
+                <Zap className="w-3.5 h-3.5 text-mani-red" /> Open in UPI App (GPay / PhonePe / FamPay)
               </a>
             </div>
 

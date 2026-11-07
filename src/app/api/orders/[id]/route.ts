@@ -27,7 +27,7 @@ export async function GET(
     const fampayUpiId =
       process.env.NEXT_PUBLIC_FAMPAY_UPI_ID ||
       process.env.FAMPAY_UPI_ID ||
-      "mani272@fam";
+      "das360s@fam";
 
     return NextResponse.json({
       success: true,
@@ -45,3 +45,4 @@ export async function GET(
     );
   }
 }
+

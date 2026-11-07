@@ -107,11 +107,16 @@ export async function readFamPayEmails(lookbackMinutes = 60): Promise<ParsedPaym
       for await (const message of messages) {
         try {
           const fromAddress = message.envelope?.from?.[0]?.address?.toLowerCase() || "";
-          // Check if sender is FamPay or related
+          const subject = message.envelope?.subject?.toLowerCase() || "";
+          // Check if sender or subject is FamPay / FamX / UPI transaction email
           const isFamPay =
             fromAddress.includes("famapp.in") ||
             fromAddress.includes("fampay.in") ||
-            fromAddress.includes("fam.in");
+            fromAddress.includes("fam.in") ||
+            fromAddress.includes("fampay") ||
+            subject.includes("famx") ||
+            subject.includes("fampay") ||
+            (subject.includes("received") && (subject.includes("₹") || subject.includes("inr")));
 
           if (!isFamPay) {
             continue;
@@ -142,3 +147,4 @@ export async function readFamPayEmails(lookbackMinutes = 60): Promise<ParsedPaym
 
   return payments;
 }
+

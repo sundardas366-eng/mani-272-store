@@ -269,9 +269,9 @@ export async function getOrder(orderId: string): Promise<LocalOrder | null> {
     return found;
   }
 
-  // 3. Fallback recovery: if orderId matches our pattern (e.g. M272-XXXXXXXX),
+  // 3. Fallback recovery: if orderId matches our pattern (e.g. M272-XXXXXXXX or any M272 prefix),
   // create a safe fallback so the customer is never shown "Order Not Found"!
-  if (/^M272-\d+/i.test(orderId)) {
+  if (/^M272/i.test(orderId)) {
     const fallbackBase = 119; // Default 1-day plan
     const fallbackPaise = Math.round(fallbackBase * 100) + (parseInt(orderId.slice(-2), 10) || 37);
     const fallbackOrder: LocalOrder = {
@@ -305,6 +305,58 @@ export async function getOrder(orderId: string): Promise<LocalOrder | null> {
   }
 
   return null;
+}
+
+/**
+ * Marks an order as paid and binds UTR and license key.
+ */
+export async function markOrderAsPaid(
+  orderId: string,
+  utr: string,
+  licenseKey: string
+): Promise<LocalOrder | null> {
+  const nowIso = new Date().toISOString();
+
+  // 1. Update in-memory / local disk cache
+  const orders = readLocalOrders();
+  const idx = orders.findIndex((o) => o.orderId === orderId);
+  let updatedOrder: LocalOrder | null = null;
+
+  if (idx !== -1) {
+    orders[idx] = {
+      ...orders[idx],
+      status: "paid",
+      utr,
+      licenseKey,
+      paidAt: nowIso,
+      updatedAt: nowIso,
+    };
+    updatedOrder = orders[idx];
+    writeLocalOrders(orders);
+  }
+
+  // 2. Update MongoDB if connected
+  const conn = await connectToDatabase();
+  if (conn) {
+    try {
+      await Order.findOneAndUpdate(
+        { orderId },
+        {
+          $set: {
+            status: "paid",
+            utr,
+            licenseKey,
+            paidAt: new Date(),
+            updatedAt: new Date(),
+          },
+        }
+      );
+    } catch (err) {
+      console.warn("MongoDB markOrderAsPaid warning:", err);
+    }
+  }
+
+  return updatedOrder;
 }
 
 /**

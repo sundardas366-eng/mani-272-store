@@ -28,36 +28,80 @@ export interface OrderForDelivery {
 }
 
 /**
+ * Calculates plan days based on paid amount or duration string.
+ * Plan Table:
+ *   ₹119  -> 1 day
+ *   ₹349  -> 3 days
+ *   ₹649  -> 7 days
+ *   ₹1599 -> 30 days
+ *   ₹3999 -> 3650 days (Lifetime)
+ */
+export function calculatePlanDays(amountINR: number, durationStr?: string): number {
+  if (durationStr === "1day") return 1;
+  if (durationStr === "3days") return 3;
+  if (durationStr === "7days") return 7;
+  if (durationStr === "30days") return 30;
+  if (durationStr === "lifetime") return 3650;
+
+  if (amountINR >= 3999) return 3650;
+  if (amountINR >= 1599) return 30;
+  if (amountINR >= 649) return 7;
+  if (amountINR >= 349) return 3;
+  if (amountINR >= 119) return 1;
+
+  return 1;
+}
+
+/**
  * Generates an automated license key formatted according to purchased duration:
  * e.g. 1day -> MANI-1D-XXXX-XXXX-XXXX
+ *      3days -> MANI-3D-XXXX-XXXX-XXXX
+ *      7days -> MANI-7D-XXXX-XXXX-XXXX
  *      30days -> MANI-30D-XXXX-XXXX-XXXX
  *      lifetime -> MANI-LIFE-XXXX-XXXX-XXXX
  */
-export function generateLicenseKey(duration?: string): string {
+export function generateLicenseKey(duration?: string | number): string {
   const bytes = crypto.randomBytes(6).toString("hex").toUpperCase();
   const part1 = bytes.substring(0, 4);
   const part2 = bytes.substring(4, 8);
   const part3 = crypto.randomBytes(2).toString("hex").toUpperCase();
 
   let prefix = "MANI";
-  if (duration === "1day") prefix = "MANI-1D";
-  else if (duration === "3days") prefix = "MANI-3D";
-  else if (duration === "7days") prefix = "MANI-7D";
-  else if (duration === "30days") prefix = "MANI-30D";
-  else if (duration === "lifetime") prefix = "MANI-LIFE";
+  if (duration === "1day" || duration === 1) prefix = "MANI-1D";
+  else if (duration === "3days" || duration === 3) prefix = "MANI-3D";
+  else if (duration === "7days" || duration === 7) prefix = "MANI-7D";
+  else if (duration === "30days" || duration === 30) prefix = "MANI-30D";
+  else if (duration === "lifetime" || duration === 3650) prefix = "MANI-LIFE";
 
   return `${prefix}-${part1}-${part2}-${part3}`;
 }
 
 /**
- * Attempts to request a key from an external bot/board panel API if BOARD_API_URL is configured.
+ * Calculates key expiration date based on duration in days.
  */
-async function fetchKeyFromBoard(order: OrderForDelivery, duration?: string): Promise<string | null> {
+export function calculateKeyExpiration(days: number): Date {
+  const now = new Date();
+  if (days >= 3650) {
+    // 10 years for lifetime
+    return new Date(now.getTime() + 10 * 365 * 24 * 60 * 60 * 1000);
+  }
+  return new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+}
+
+/**
+ * Calls keyword-bot API to generate access key valid for the exact duration.
+ * Uses official API key: mani272_8ca9bcfb6152cbbb5b5d42e4a2637bd074edf134
+ */
+export async function callKeywordBotApi(
+  days: number,
+  orderId?: string,
+  customerEmail?: string
+): Promise<string | null> {
   const boardUrl = process.env.BOARD_API_URL?.trim();
   const apiKey =
     process.env.BOARD_API_KEY?.trim() ||
-    process.env.CRON_SECRET?.trim() ||
-    "mani272_d41571add8b84d149c424a988c46b3569ea73628";
+    process.env.BOT_API_KEY?.trim() ||
+    "mani272_8ca9bcfb6152cbbb5b5d42e4a2637bd074edf134";
 
   if (!boardUrl || !boardUrl.startsWith("http")) {
     return null;
@@ -72,11 +116,10 @@ async function fetchKeyFromBoard(order: OrderForDelivery, duration?: string): Pr
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        orderId: order.orderId,
-        duration: duration || "30days",
-        product: order.items[0]?.productName || "Gaming Panel",
-        customerEmail: order.customerEmail,
-        discordId: order.discordId || "",
+        orderId: orderId || `KEY-${Date.now().toString().slice(-6)}`,
+        days,
+        duration: `${days}days`,
+        customerEmail: customerEmail || "customer@mani272.com",
       }),
     });
 
@@ -87,10 +130,18 @@ async function fetchKeyFromBoard(order: OrderForDelivery, duration?: string): Pr
       }
     }
   } catch (err) {
-    console.warn("[Board API] External board call failed, falling back to built-in generator:", err);
+    console.warn("[Bot API] External bot call failed, falling back to built-in generator:", err);
   }
 
   return null;
+}
+
+/**
+ * Attempts to request a key from an external bot/board panel API if BOARD_API_URL is configured.
+ */
+async function fetchKeyFromBoard(order: OrderForDelivery, duration?: string): Promise<string | null> {
+  const days = calculatePlanDays(order.baseAmount, duration);
+  return await callKeywordBotApi(days, order.orderId, order.customerEmail);
 }
 
 /**

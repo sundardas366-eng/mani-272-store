@@ -17,10 +17,14 @@ import {
   ShieldCheck,
   Zap,
   ShoppingBag,
+  Send,
+  HelpCircle,
 } from "lucide-react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { ParticleBackground } from "@/components/animations/ParticleBackground";
+import Confetti from "react-confetti";
+import toast from "react-hot-toast";
 
 interface OrderData {
   orderId: string;
@@ -60,11 +64,16 @@ function OrderConfirmationContent() {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
   const [timeLeft, setTimeLeft] = useState<string>("");
   const [isExpired, setIsExpired] = useState(false);
-  const [verifying, setVerifying] = useState(false);
   const [copiedAmount, setCopiedAmount] = useState(false);
   const [copiedUpi, setCopiedUpi] = useState(false);
   const [copiedKey, setCopiedKey] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+
+  // UTR Submission States
+  const [utrInput, setUtrInput] = useState("");
+  const [verifyingUtr, setVerifyingUtr] = useState(false);
+  const [utrError, setUtrError] = useState("");
+  const [rateLimitInfo, setRateLimitInfo] = useState<string | null>(null);
 
   // Instant local cache recovery
   useEffect(() => {
@@ -86,7 +95,10 @@ function OrderConfirmationContent() {
 
   // Fetch order data from server
   const fetchOrder = useCallback(async () => {
-    if (!orderId) return;
+    if (!orderId) {
+      setLoading(false);
+      return;
+    }
     try {
       const res = await fetch(`/api/orders/${orderId}`);
       if (res.ok) {
@@ -102,18 +114,30 @@ function OrderConfirmationContent() {
           }
         }
       } else {
-        // If server 404, check if cached in localStorage and push to server
-        const cached =
-          (orderId && localStorage.getItem(`mani_order_${orderId}`)) ||
-          localStorage.getItem("mani_last_order");
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          setOrder(parsed);
-          fetch("/api/orders", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(parsed),
-          }).catch(() => {});
+        // Automatic serverless recovery: create the order immediately if server lost cache
+        const resCreate = await fetch("/api/orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            orderId,
+            customerName: "Customer",
+            customerEmail: "support@mani272.com",
+            baseAmount: 119,
+            items: [
+              {
+                productId: "p01",
+                productName: "SILENT-AIM",
+                duration: "1day",
+                durationLabel: "1 Day Access",
+                priceINR: 119,
+                quantity: 1,
+              },
+            ],
+          }),
+        });
+        const dataCreate = await resCreate.json();
+        if (dataCreate.success && dataCreate.order) {
+          setOrder(dataCreate.order);
         }
       }
     } catch (err) {
@@ -135,7 +159,7 @@ function OrderConfirmationContent() {
     const amount = order.payAmountRupees || (order.payAmount / 100).toFixed(2);
     const cleanOrderId = order.orderId.replace(/[^a-zA-Z0-9]/g, "");
 
-    // NPCI UPI Standard Scheme with pre-filled & locked amount:
+    // NPCI UPI Standard Scheme with pre-filled & locked amount
     const upiUri = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=MANI272&am=${amount}&cu=INR&tn=Order${cleanOrderId}`;
 
     QRCode.toDataURL(upiUri, {
@@ -153,7 +177,8 @@ function OrderConfirmationContent() {
 
   // Expiration countdown
   useEffect(() => {
-    if (!order || order.status !== "pending") return;
+    if (!order || order.status !== "paid" && isExpired) return;
+    if (order.status !== "pending") return;
 
     const interval = setInterval(() => {
       const expiry = new Date(order.expiresAt).getTime();
@@ -174,9 +199,9 @@ function OrderConfirmationContent() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [order]);
+  }, [order, isExpired]);
 
-  // Auto-polling for verification every 5 seconds if pending
+  // Background auto-polling for payment verification
   useEffect(() => {
     if (!order || order.status !== "pending" || isExpired) return;
 
@@ -196,35 +221,78 @@ function OrderConfirmationContent() {
             clearInterval(pollInterval);
           }
         }
-      } catch (err) {
-        console.error("Auto poll error:", err);
-      }
-    }, 5000);
+      } catch {}
+    }, 6000);
 
     return () => clearInterval(pollInterval);
   }, [order, isExpired]);
 
-  // Manual "I Have Paid" trigger
-  const handleManualVerify = async () => {
+  // Handle customer 12-Digit UTR submission
+  const handleVerifyUtr = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!order) return;
-    setVerifying(true);
+
+    const cleanUtr = utrInput.trim();
+    if (!cleanUtr) {
+      setUtrError("Please enter your 12-digit UTR / UPI reference number.");
+      return;
+    }
+
+    if (!/^\d{12}$/.test(cleanUtr)) {
+      setUtrError("UTR must contain exactly 12 numeric digits (e.g. 431289123456).");
+      return;
+    }
+
+    setVerifyingUtr(true);
+    setUtrError("");
+    setRateLimitInfo(null);
+
     try {
-      const res = await fetch("/api/verify/order", {
+      const res = await fetch("/api/payments/verify-utr", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId: order.orderId }),
+        body: JSON.stringify({
+          utr: cleanUtr,
+          orderId: order.orderId,
+          minAmountINR: order.baseAmount,
+          customerEmail: order.customerEmail,
+          customerDiscord: order.discordId || "",
+        }),
       });
+
       const data = await res.json();
-      if (data.success && data.order) {
-        setOrder(data.order);
-        if (data.order.status === "paid") {
-          setShowCelebration(true);
+
+      if (res.ok && data.success && data.verified) {
+        toast.success("Payment Verified! Your license key is ready.");
+        setOrder((prev) =>
+          prev
+            ? {
+                ...prev,
+                status: "paid",
+                utr: cleanUtr,
+                licenseKey: data.key,
+                downloadUrl: data.downloadUrl || prev.downloadUrl,
+              }
+            : null
+        );
+        setShowCelebration(true);
+      } else {
+        const msg = data.error || "Payment not found yet, try again in a few minutes.";
+        setUtrError(msg);
+        if (data.remainingAttempts !== undefined) {
+          setRateLimitInfo(`Attempts remaining this hour: ${data.remainingAttempts}/5`);
+        }
+        if (res.status === 429) {
+          toast.error("Rate limit reached. Please wait before retrying.");
+        } else {
+          toast.error(msg);
         }
       }
-    } catch (err) {
-      console.error("Manual verify failed:", err);
+    } catch (err: any) {
+      console.error("UTR verification request failed:", err);
+      setUtrError("Connection error while verifying. Please try again.");
     } finally {
-      setVerifying(false);
+      setVerifyingUtr(false);
     }
   };
 
@@ -251,58 +319,25 @@ function OrderConfirmationContent() {
     );
   }
 
+  // Automatic recovery if order is still null
   if (!order) {
-    const handleRestoreOrder = async () => {
-      setLoading(true);
-      try {
-        const res = await fetch("/api/orders", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            orderId: orderId || `M272-${Date.now().toString().slice(-8)}`,
-            customerName: "Customer",
-            customerEmail: "support@mani272.com",
-            baseAmount: 119,
-            items: [
-              {
-                productId: "p01",
-                productName: "SILENT-AIM",
-                duration: "1day",
-                durationLabel: "1 Day Access",
-                priceINR: 119,
-                quantity: 1,
-              },
-            ],
-          }),
-        });
-        const data = await res.json();
-        if (data.success && data.order) {
-          setOrder(data.order);
-        }
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     return (
       <div className="glass-card rounded-3xl p-8 sm:p-10 text-center max-w-lg mx-auto border-mani-red/30">
         <div className="w-16 h-16 rounded-full bg-mani-red/10 border border-mani-red/30 flex items-center justify-center mx-auto mb-4">
           <Zap className="w-8 h-8 text-mani-red animate-pulse" />
         </div>
-        <h2 className="text-2xl font-black text-white mb-2">Payment Ready</h2>
+        <h2 className="text-2xl font-black text-white mb-2">Instant Payment Setup</h2>
         <p className="text-white/60 text-sm mb-6 leading-relaxed">
-          Order ID: <code className="text-mani-red font-mono font-bold">{orderId || "M272-NEW"}</code>
+          Order ID: <code className="text-mani-red font-mono font-bold">{orderId || "M272-LIVE"}</code>
           <br />
-          Click below to generate your UPI QR Code with locked amount.
+          Click below to load your UPI QR code.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <button
-            onClick={handleRestoreOrder}
+            onClick={() => fetchOrder()}
             className="btn-glow inline-flex items-center justify-center gap-2 py-3 px-6 text-sm font-bold"
           >
-            <Zap className="w-4 h-4" /> Generate Payment QR Now
+            <Zap className="w-4 h-4" /> Load Payment QR Now
           </button>
           <Link href="/products" className="btn-ghost inline-flex items-center justify-center gap-2 py-3 px-6 text-sm">
             Browse Products
@@ -324,6 +359,15 @@ function OrderConfirmationContent() {
       {/* ============================================================== */}
       {order.status === "paid" && (
         <div className="glass-card rounded-3xl p-8 sm:p-12 text-center border-emerald-500/40 relative overflow-hidden">
+          {showCelebration && (
+            <Confetti
+              width={typeof window !== "undefined" ? window.innerWidth : 800}
+              height={typeof window !== "undefined" ? window.innerHeight : 600}
+              recycle={false}
+              numberOfPieces={300}
+            />
+          )}
+
           {/* Subtle green ambient glow */}
           <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-96 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
 
@@ -411,7 +455,7 @@ function OrderConfirmationContent() {
       {/* ============================================================== */}
       {/* CASE 2: ORDER IS EXPIRED */}
       {/* ============================================================== */}
-      {order.status === "expired" || isExpired ? (
+      {order.status === "expired" || (isExpired && order.status !== "paid") ? (
         <div className="glass-card rounded-3xl p-8 sm:p-12 text-center border-red-500/30">
           <div className="w-16 h-16 rounded-full bg-red-500/20 border border-red-500/50 flex items-center justify-center mx-auto mb-4">
             <Clock className="w-8 h-8 text-red-500" />
@@ -447,7 +491,7 @@ function OrderConfirmationContent() {
             </h1>
             <p className="text-white/50 text-xs sm:text-sm mt-1">
               Transfer the <strong className="text-white">exact paise amount</strong> below. 
-              Our system checks incoming FamPay notifications and auto-delivers your key!
+              After paying, enter your 12-digit UTR below for instant verification!
             </p>
           </div>
 
@@ -566,43 +610,77 @@ function OrderConfirmationContent() {
                   <span className="text-white font-medium">{order.customerEmail}</span>
                 </div>
               </div>
-
-              {/* Manual "I Have Paid" Action */}
-              <button
-                onClick={handleManualVerify}
-                disabled={verifying}
-                className="btn-glow w-full py-3.5 font-bold text-sm inline-flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {verifying ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" /> Verifying with Gmail...
-                  </>
-                ) : (
-                  <>
-                    <Zap className="w-4 h-4" /> I Have Paid ₹{exactAmount}
-                  </>
-                )}
-              </button>
-
-              <div className="flex items-center justify-center gap-2 text-[11px] text-white/40">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                <span>Auto-checking payment status in background every 5s...</span>
-              </div>
             </div>
           </div>
 
-          {/* Step by Step Instructions */}
-          <div className="rounded-2xl p-5 bg-black/20 border border-white/5 space-y-3">
-            <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-mani-red" /> How Verification Works:
-            </h3>
-            <ol className="text-xs text-white/60 space-y-2 list-decimal list-inside leading-relaxed">
-              <li>Open your favorite UPI app (FamPay, GPay, PhonePe, Paytm).</li>
-              <li>Scan the QR code or send to <strong className="text-white">{fampayUpi}</strong>.</li>
-              <li>Enter the EXACT amount of <strong className="text-mani-red">₹{exactAmount}</strong>.</li>
-              <li>Once payment succeeds, FamPay notifies our server via email.</li>
-              <li>Your order status will automatically turn green and reveal your license key!</li>
-            </ol>
+          {/* ============================================================== */}
+          {/* UTR SUBMISSION & VERIFICATION CARD */}
+          {/* ============================================================== */}
+          <div className="p-6 rounded-2xl bg-black/60 border-2 border-mani-red/40 shadow-xl mb-6">
+            <div className="flex items-center gap-2 mb-2">
+              <ShieldCheck className="w-5 h-5 text-mani-red" />
+              <h3 className="text-base font-black text-white uppercase tracking-wider">
+                Step 2: Enter 12-Digit UTR / Reference Number
+              </h3>
+            </div>
+            <p className="text-white/50 text-xs mb-4 leading-relaxed">
+              After completing the UPI transfer, check your UPI app or bank SMS/Receipt for the 
+              <strong> 12-digit UTR / UPI Ref No</strong> and enter it here for instant real-time bank verification.
+            </p>
+
+            <form onSubmit={handleVerifyUtr} className="space-y-3">
+              <div className="relative">
+                <input
+                  type="text"
+                  maxLength={12}
+                  value={utrInput}
+                  onChange={(e) => {
+                    setUtrInput(e.target.value.replace(/\D/g, ""));
+                    setUtrError("");
+                  }}
+                  placeholder="Enter 12-digit UTR (e.g. 431289123456)"
+                  className="w-full bg-black/80 border border-white/20 focus:border-mani-red rounded-xl px-4 py-3.5 text-white font-mono text-base tracking-wider placeholder:text-white/30 focus:outline-none transition"
+                />
+                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-mono text-white/40">
+                  {utrInput.length}/12
+                </span>
+              </div>
+
+              {utrError && (
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold">{utrError}</p>
+                    {rateLimitInfo && <p className="text-[11px] text-white/50 mt-1">{rateLimitInfo}</p>}
+                  </div>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={verifyingUtr || utrInput.length !== 12}
+                className="btn-glow w-full py-3.5 font-bold text-sm inline-flex items-center justify-center gap-2 disabled:opacity-50 transition"
+              >
+                {verifyingUtr ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" /> Verifying Bank Credit Alert...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" /> Verify UTR & Claim License Key
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+
+          {/* Trust Banner */}
+          <div className="border-t border-white/10 pt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-white/40">
+            <span className="flex items-center gap-1.5">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              Automated Bank Verification Active
+            </span>
+            <span>Need help? Discord: Eagle 272 / Mani 272</span>
           </div>
         </div>
       )}
@@ -615,12 +693,12 @@ export default function OrderConfirmationPage() {
     <>
       <ParticleBackground />
       <Navbar />
-      <main className="relative z-10 min-h-screen pt-12 pb-24 px-4 sm:px-6">
+      <main className="relative z-10 min-h-screen pt-8 pb-16 px-4">
         <Suspense
           fallback={
-            <div className="glass-card rounded-3xl p-12 text-center text-white/50 max-w-md mx-auto">
+            <div className="glass-card rounded-3xl p-12 text-center max-w-md mx-auto">
               <div className="loader-ring mx-auto mb-4" />
-              Loading order details...
+              <p className="text-white/60 font-medium">Loading order details...</p>
             </div>
           }
         >

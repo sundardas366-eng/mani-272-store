@@ -1,30 +1,125 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, Lock, ShieldCheck, Zap, ArrowRight } from "lucide-react";
+import Link from "next/link";
+import {
+  AlertCircle,
+  Lock,
+  ShieldCheck,
+  Zap,
+  ArrowRight,
+  User,
+  Mail,
+  Eye,
+  EyeOff,
+  UserCheck,
+  Sparkles,
+} from "lucide-react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { ParticleBackground } from "@/components/animations/ParticleBackground";
 import { useCartStore } from "@/store/cart";
 import { formatPrice } from "@/lib/utils";
+import toast from "react-hot-toast";
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, getTotal, clearCart } = useCartStore();
   const total = getTotal();
 
+  // Auth & customer states
+  const [currentUser, setCurrentUser] = useState<{ email: string; name: string } | null>(null);
+  const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPass, setShowPass] = useState(false);
   const [contact, setContact] = useState("");
   const [discordId, setDiscordId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("fampay_upi");
   const [processing, setProcessing] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+
+  // Check existing login session on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("mani-272-user");
+      if (stored) {
+        const u = JSON.parse(stored);
+        if (u && u.email) {
+          setCurrentUser(u);
+          setEmail(u.email);
+          setName(u.name || u.email.split("@")[0]);
+        }
+      }
+      const savedEmail = localStorage.getItem("mani_customer_email");
+      if (savedEmail && !email) setEmail(savedEmail);
+      const savedName = localStorage.getItem("mani_customer_name");
+      if (savedName && !name) setName(savedName);
+    } catch {}
+  }, []);
+
+  // Inline login handler
+  const handleInlineAuth = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) {
+      toast.error("Please enter your email");
+      return;
+    }
+    if (!password.trim()) {
+      toast.error("Please enter your password");
+      return;
+    }
+
+    setAuthLoading(true);
+
+    setTimeout(() => {
+      const trimmedEmail = email.trim().toLowerCase();
+      const derivedName = name.trim() || trimmedEmail.split("@")[0];
+      const user = {
+        email: trimmedEmail,
+        name: derivedName,
+        role: trimmedEmail.includes("admin") ? "admin" : "user",
+      };
+
+      try {
+        localStorage.setItem("mani-272-user", JSON.stringify(user));
+        localStorage.setItem("mani_customer_email", user.email);
+        localStorage.setItem("mani_customer_name", user.name);
+      } catch {}
+
+      setCurrentUser(user);
+      setName(user.name);
+      setEmail(user.email);
+      setAuthLoading(false);
+      toast.success(`Signed in as ${user.name}!`);
+    }, 500);
+  };
+
+  const handleLogout = () => {
+    try {
+      localStorage.removeItem("mani-272-user");
+    } catch {}
+    setCurrentUser(null);
+    setPassword("");
+    toast.success("Signed out");
+  };
 
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email || !contact) return;
+
+    const finalEmail = (email || (currentUser ? currentUser.email : "")).trim();
+    const finalName = (name || (currentUser ? currentUser.name : "") || (finalEmail ? finalEmail.split("@")[0] : "Customer")).trim();
+    const finalContact = (contact || "Instant Email Delivery").trim();
+
+    if (!finalEmail) {
+      setErrorMessage("Please enter your email or sign in to receive your key.");
+      toast.error("Please sign in or enter your delivery email");
+      return;
+    }
+
     setProcessing(true);
     setErrorMessage("");
 
@@ -33,9 +128,9 @@ export default function CheckoutPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          customerName: name.trim(),
-          customerEmail: email.trim(),
-          contact: contact.trim(),
+          customerName: finalName,
+          customerEmail: finalEmail,
+          contact: finalContact,
           discordId: discordId.trim(),
           paymentMethod,
           baseAmount: total,
@@ -132,71 +227,235 @@ export default function CheckoutPage() {
             </div>
           )}
 
-          <form onSubmit={handleCheckout} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Form Fields */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Left Column: Replaced Contact Block with Login & Customer Authentication */}
             <div className="lg:col-span-2 space-y-6">
-              <div className="glass-card rounded-2xl p-6 sm:p-8">
-                <h2 className="font-bold text-white text-lg mb-6 flex items-center gap-2">
-                  <ShieldCheck className="w-5 h-5 text-mani-red" /> Contact & Delivery Information
-                </h2>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-xs font-bold text-white/50 uppercase tracking-wider mb-2 block">
-                      Full Name *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="input-mani w-full"
-                      placeholder="e.g. Mani Gamer"
-                    />
+              {currentUser ? (
+                /* 1. AUTHENTICATED CUSTOMER STATE */
+                <div className="glass-card rounded-2xl p-6 sm:p-8 border-mani-red/40 bg-black/60 shadow-lg shadow-mani-red/10">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-white/10">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-mani-red to-red-950 border border-mani-red/60 flex items-center justify-center font-black text-white text-lg shadow-md shadow-mani-red/20">
+                        {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : "U"}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h2 className="font-bold text-white text-base">
+                            {currentUser.name || "Customer Account"}
+                          </h2>
+                          <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                            <UserCheck className="w-3 h-3" /> VERIFIED
+                          </span>
+                        </div>
+                        <p className="text-white/40 text-xs mt-0.5 font-mono">{currentUser.email}</p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="text-xs text-white/40 hover:text-mani-red transition self-start sm:self-auto"
+                    >
+                      Switch Account / Sign Out
+                    </button>
                   </div>
 
-                  <div>
-                    <label className="text-xs font-bold text-white/50 uppercase tracking-wider mb-2 block">
-                      Email Address (For Key Delivery) *
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="input-mani w-full"
-                      placeholder="you@example.com"
-                    />
-                  </div>
+                  {/* Delivery Details on File */}
+                  <div className="mt-5 space-y-4">
+                    <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between text-xs">
+                      <span className="text-white/50">Key Delivery Destination:</span>
+                      <span className="font-mono text-mani-red font-bold text-sm">{currentUser.email}</span>
+                    </div>
 
-                  <div>
-                    <label className="text-xs font-bold text-white/50 uppercase tracking-wider mb-2 block">
-                      Phone / Telegram / WhatsApp *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={contact}
-                      onChange={(e) => setContact(e.target.value)}
-                      className="input-mani w-full"
-                      placeholder="+91 98765 43210 or @username"
-                    />
-                  </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs font-bold text-white/50 uppercase tracking-wider mb-2 block">
+                          Phone / WhatsApp / Telegram
+                        </label>
+                        <input
+                          type="text"
+                          value={contact}
+                          onChange={(e) => setContact(e.target.value)}
+                          className="input-mani w-full text-xs"
+                          placeholder="+91 98765 43210 or @username"
+                        />
+                      </div>
 
-                  <div>
-                    <label className="text-xs font-bold text-white/50 uppercase tracking-wider mb-2 block flex items-center justify-between">
-                      <span>Discord User ID (Optional)</span>
-                      <span className="text-[10px] text-white/40 lowercase">for Discord role & DM</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={discordId}
-                      onChange={(e) => setDiscordId(e.target.value)}
-                      className="input-mani w-full font-mono text-sm"
-                      placeholder="e.g. 1457931837769908467"
-                    />
+                      <div>
+                        <label className="text-xs font-bold text-white/50 uppercase tracking-wider mb-2 block flex items-center justify-between">
+                          <span>Discord User ID (Optional)</span>
+                          <span className="text-[10px] text-white/40 lowercase">for role & DM</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={discordId}
+                          onChange={(e) => setDiscordId(e.target.value)}
+                          className="input-mani w-full font-mono text-xs"
+                          placeholder="e.g. 1457931837769908467"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                /* 2. CUSTOMER LOGIN & SIGN-IN CARD (Replaces previous manual form) */
+                <div className="glass-card rounded-2xl p-6 sm:p-8 border-mani-red/30 bg-black/70 shadow-lg shadow-mani-red/10">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+                    <div>
+                      <h2 className="font-bold text-white text-lg flex items-center gap-2">
+                        <Lock className="w-5 h-5 text-mani-red" /> Customer Login & Delivery Account
+                      </h2>
+                      <p className="text-white/40 text-xs mt-1">
+                        Sign in to access your license keys and automatic download links.
+                      </p>
+                    </div>
+
+                    <Link
+                      href="/login"
+                      className="text-xs text-mani-red hover:underline inline-flex items-center gap-1 font-medium self-start sm:self-auto"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" /> Open Lamp Login Page
+                    </Link>
+                  </div>
+
+                  {/* Tabs: Sign In / Create Account */}
+                  <div className="flex border-b border-white/10 mb-6 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setAuthMode("login")}
+                      className={`pb-2.5 px-3 text-xs font-bold uppercase tracking-wider transition border-b-2 ${
+                        authMode === "login"
+                          ? "border-mani-red text-mani-red"
+                          : "border-transparent text-white/40 hover:text-white"
+                      }`}
+                    >
+                      Sign In
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAuthMode("register")}
+                      className={`pb-2.5 px-3 text-xs font-bold uppercase tracking-wider transition border-b-2 ${
+                        authMode === "register"
+                          ? "border-mani-red text-mani-red"
+                          : "border-transparent text-white/40 hover:text-white"
+                      }`}
+                    >
+                      Create Account
+                    </button>
+                  </div>
+
+                  {/* Login / Register Fields */}
+                  <div className="space-y-4">
+                    {authMode === "register" && (
+                      <div>
+                        <label className="text-xs font-bold text-white/50 uppercase tracking-wider mb-1.5 block">
+                          Full Name *
+                        </label>
+                        <div className="relative">
+                          <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                          <input
+                            type="text"
+                            required
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            className="input-mani pl-10 w-full text-xs"
+                            placeholder="e.g. Sundar Das"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="text-xs font-bold text-white/50 uppercase tracking-wider mb-1.5 block">
+                        Email Address (For Key Delivery) *
+                      </label>
+                      <div className="relative">
+                        <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                        <input
+                          type="email"
+                          required
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          className="input-mani pl-10 w-full text-xs font-mono"
+                          placeholder="sundardas366@gmail.com"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-bold text-white/50 uppercase tracking-wider mb-1.5 block">
+                        Password *
+                      </label>
+                      <div className="relative">
+                        <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                        <input
+                          type={showPass ? "text" : "password"}
+                          required
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          className="input-mani pl-10 pr-10 w-full text-xs"
+                          placeholder="••••••••"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPass(!showPass)}
+                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition"
+                        >
+                          {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs font-bold text-white/50 uppercase tracking-wider mb-1.5 block">
+                          Phone / WhatsApp / Telegram
+                        </label>
+                        <input
+                          type="text"
+                          value={contact}
+                          onChange={(e) => setContact(e.target.value)}
+                          className="input-mani w-full text-xs"
+                          placeholder="+91 98765 43210 or @username"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-white/50 uppercase tracking-wider mb-1.5 block flex items-center justify-between">
+                          <span>Discord ID (Optional)</span>
+                          <span className="text-[10px] text-white/40 lowercase">for role & DM</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={discordId}
+                          onChange={(e) => setDiscordId(e.target.value)}
+                          className="input-mani w-full font-mono text-xs"
+                          placeholder="e.g. 1457931837769908467"
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleInlineAuth}
+                      disabled={authLoading}
+                      className="w-full py-2.5 rounded-xl bg-white/10 hover:bg-mani-red text-white text-xs font-bold uppercase tracking-wider border border-white/10 hover:border-mani-red transition flex items-center justify-center gap-2 mt-2"
+                    >
+                      {authLoading ? (
+                        <>
+                          <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>Verifying Account...</span>
+                        </>
+                      ) : (
+                        <>
+                          <UserCheck className="w-4 h-4" />
+                          <span>{authMode === "login" ? "Sign In & Save Session" : "Create Account & Save Session"}</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Payment Methods */}
               <div className="glass-card rounded-2xl p-6 sm:p-8">
@@ -290,7 +549,8 @@ export default function CheckoutPage() {
                 </div>
 
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={handleCheckout}
                   disabled={processing}
                   className="btn-glow w-full inline-flex items-center justify-center gap-2 py-3.5 text-base font-bold disabled:opacity-50"
                 >
@@ -312,7 +572,7 @@ export default function CheckoutPage() {
                 </div>
               </div>
             </div>
-          </form>
+          </div>
         </div>
       </main>
       <Footer />

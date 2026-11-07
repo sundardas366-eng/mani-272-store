@@ -102,3 +102,4 @@ export function updateProduct(
     updatedAt: now,
   };
 }
+
